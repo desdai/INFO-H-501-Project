@@ -30,4 +30,4 @@ df = df[["ID", "Source", "RA_ICRS", "DE_ICRS", "BP_RP", "Gmag", "Rad", "BPmag", 
 
 # ---- Save final dataset ----
 df.to_csv(out_csv, index=False)
-print(f"🌟 Saved top 2000 brightest stars to {Path(out_csv).resolve()}")
+print(f"Saved top 2000 brightest stars to {Path(out_csv).resolve()}")
