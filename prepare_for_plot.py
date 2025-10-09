@@ -107,7 +107,7 @@ def main():
     df_out.to_csv(OUT_CSV, index=False)
 
     print(f"Wrote {len(df_out)} rows to {Path(OUT_CSV).resolve()} "
-          f"(top {BRIGHT_TOP_N} brightest, colormap='{COLORMAP}')")
+          f"(top {BRIGHT_TOP_N} largest, colormap='{COLORMAP}')")
 
 if __name__ == "__main__":
     main()
