@@ -44,8 +44,19 @@ python plot.py
 ```
 
 # Algorithm to outline constellations
+(This week's progress)
 
-Todo (this week): We need to propose a few candidate algorithms for connecting these stars, so that they show constellations.
+```bash
+plot_out.py
+```
+
+Plots the output by geo-location, size, and color with 5 candidate algorithms.
+
+```bash
+plot_real.py
+```
+Plots the constellation from a real boundary (the lines are still connected by us). Using the astropy library, we first identify the real constellation boundary, then carry out geo-location connection algorithms (partly from plot_out.py)
+
 
 # Web Deployment
 Todo (at least 2 weeks from now) Build interactable webpage for the project
