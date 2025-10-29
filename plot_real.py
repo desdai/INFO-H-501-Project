@@ -27,7 +27,7 @@ Example:
     --observer_lat 39.77 --observer_lon -86.16 --observer_elev_m 220 \
     --utc_time 2025-11-06T02:00:00 \
     --mask_pad_deg 5 --draw_masks \
-    --label_dx -15 --label_dy 1.5 --outdir out_week9.4
+    --label_dx -15 --label_dy 1.5 --outdir out_week9
 
 Requirements:
   astropy, numpy, pandas, matplotlib, scipy

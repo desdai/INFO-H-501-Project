@@ -53,7 +53,13 @@ plot_out.py
 Plots the output by geo-location, size, and color with 5 candidate algorithms.
 
 ```bash
-plot_real.py
+  python plot_real.py \
+    --csv stars_plot_ready.csv --top_n 1000 \
+    --apply_visibility \
+    --observer_lat 39.77 --observer_lon -86.16 --observer_elev_m 220 \
+    --utc_time 2025-11-06T02:00:00 \
+    --mask_pad_deg 5 --draw_masks \
+    --label_dx -15 --label_dy 1.5 --outdir out_week9
 ```
 Plots the constellation from a real boundary (the lines are still connected by us). Using the astropy library, we first identify the real constellation boundary, then carry out geo-location connection algorithms (partly from plot_out.py)
 
