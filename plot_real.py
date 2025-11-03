@@ -478,8 +478,13 @@ def run_constellation_pipeline(
     import matplotlib.pyplot as plt
     from pathlib import Path
 
+    if isinstance(csv_path, pd.DataFrame):
+        df = csv_path.copy()
+    else:
+        df = load_stars(Path(csv_path))
+
     # ---- Load stars ----
-    df = load_stars(Path(csv_path))
+    # df = load_stars(Path(csv_path))
     n_all = len(df)
 
     # ---- Visibility filter ----
@@ -581,44 +586,77 @@ def run_constellation_pipeline(
         "pad_deg", "n_kept", "center_ra", "center_dec"
     ])
 
-    # ---- Plot ----
+    # ---- Plot in RA/Dec ----
     fig, ax = plt.subplots(figsize=(12, 8), facecolor="black")
     ax.set_facecolor("black")
 
+    # ---- Visual constants (copied from argparse defaults) ----
+    bg_star_scale = 1.5       # Background star size multiplier
+    fg_star_scale = 2       # Foreground star size multiplier
+    bg_star_alpha = 0.8      # Transparency for background stars
+    fg_star_alpha = 1       # Transparency for foreground stars
+    line_lw = 0.9             # Line width for constellation edges
+    label_max = 40            # Max number of constellation labels
+    label_dx = -5.0           # Label offset (RA degrees)
+    label_dy = 1.5            # Label offset (Dec degrees)
+
+    # 1) Background: ALL selected stars (faint)
     if len(df_bg):
-        bg_rgb = df_bg[["R","G","B"]].to_numpy()/255.0
-        bg_sizes = df_bg["size"].to_numpy()*0.6
+        bg_rgb = df_bg[["R", "G", "B"]].to_numpy() / 255.0
+        bg_sizes = df_bg["size"].to_numpy() * bg_star_scale
         ax.scatter(df_bg["x"], df_bg["y"], s=bg_sizes, c=bg_rgb,
-                   edgecolors="none", alpha=0.35, zorder=1)
+                   edgecolors="none", alpha=bg_star_alpha, zorder=1)
 
+    # 2) Edges for kept pass-2 components
     for (x0, y0, x1, y1) in edge_segments:
-        ax.plot([x0, x1], [y0, y1], lw=0.9, alpha=0.98, color="white", zorder=3)
+        ax.plot([x0, x1], [y0, y1], lw=line_lw, alpha=0.98, color=(1, 1, 1), zorder=3)
 
+    # 3) Foreground: kept stars (brighter)
     if len(df_keep):
-        fg_rgb = df_keep[["R","G","B"]].to_numpy()/255.0
-        fg_sizes = df_keep["size"].to_numpy()*1.2
+        fg_rgb = df_keep[["R", "G", "B"]].to_numpy() / 255.0
+        fg_sizes = df_keep["size"].to_numpy() * fg_star_scale
         ax.scatter(df_keep["x"], df_keep["y"], s=fg_sizes, c=fg_rgb,
-                   edgecolors="none", alpha=0.9, zorder=4)
+                   edgecolors="none", alpha=fg_star_alpha, zorder=4)
 
-    ax.set_xlabel("Right Ascension (°)", color="white")
-    ax.set_ylabel("Declination (°)", color="white")
+    # 4) Labels (top-N by kept size)
+    if label_rows:
+        label_rows.sort(key=lambda t: t[3], reverse=True)
+        for cname, lx, ly, _n in label_rows[:label_max]:
+            ax.text(lx, ly, cname, color="white", fontsize=9,
+                    ha=("right" if label_dx < 0 else "left"),
+                    va="center", alpha=0.9, zorder=5)
+
+    # 5) Optional: draw applied masks (bounding boxes)
+    for cname, min_ra, max_ra, min_d, max_d, pad, n_kept, cx, cy in mask_rows:
+        _plot_bbox_wrapped(ax, min_ra, max_ra, min_d, max_d, lw=0.9, alpha=0.6)
+
+    # Cosmetics
+    ax.set_xlabel("Right Ascension (deg)", color="white")
+    ax.set_ylabel("Declination (deg)", color="white")
     ax.tick_params(colors="white")
-    ax.invert_xaxis()
-    ax.set_title("Constellation Graph — bbox-constrained", color="white", pad=12)
-
+    title_bits = ["Largest Connected Component per Constellation — RA/Dec", "(bbox-constrained)"]
+    if apply_visibility:
+        title_bits.append("(visibility filtered)")
+    ax.set_title(" ".join(title_bits), color="white", pad=12)
+    ax.grid(alpha=0.15, color="white", linestyle=":")
+    ax.invert_xaxis()  # mimic sky view
     plt.tight_layout()
 
-    # ---- Stats ----
-    stats = dict(
-        total=n_all,
-        visible=n_vis,
-        background=n_bg,
-        kept=len(df_keep),
-        constellations=len(masks_df),
-    )
+    # ---- Prepare outputs for Streamlit ----
+    masks_df = pd.DataFrame(mask_rows, columns=[
+        "Constellation", "min_ra", "max_ra", "min_dec", "max_dec",
+        "pad_deg", "n_kept", "center_ra", "center_dec"
+    ])
+
+    stats = {
+        "total_stars": n_all,
+        "visible_stars": n_vis,
+        "background": len(df_bg),
+        "kept": len(df_keep),
+        "constellations": len(set(df_keep["Constellation"])) if len(df_keep) else 0
+    }
 
     return fig, df_keep, masks_df, stats
-
 
 if __name__ == "__main__":
     main()

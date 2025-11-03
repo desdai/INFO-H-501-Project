@@ -1,7 +1,29 @@
 import streamlit as st
 from plot_real import run_constellation_pipeline
+import pandas as pd
 
-st.title("Constellation Graph Explorer (MVP)")
+st.title("Constellation Graph Explorer")
+st.set_page_config(
+    page_title="Constellation Graph Explorer",
+    layout="wide",               # 🟢 makes the page take the full width
+    initial_sidebar_state="expanded"
+)
+
+# Answers to MVP meeting
+st.markdown("---")
+st.subheader("Issues")
+st.markdown("""
+- Visibility filter can empty dataset at certain lat/lon/time combinations.  
+- RA 0° wrapping can clip bounding boxes.  
+- Two-pass algorithm increases computation time slightly.
+""")
+
+st.subheader("Next Steps")
+st.markdown("""
+- Add all-sky projection view.  
+- Optimize runtime using cached constellations.  
+- Enable draggable user masks for dynamic reruns.
+""")
 
 with st.sidebar:
     st.header("Controls")
@@ -16,11 +38,19 @@ with st.sidebar:
     render = st.button("Render sky plot")
 
 if render and csv:
+    df = pd.read_csv(csv)
     fig, df_keep, masks, stats = run_constellation_pipeline(
-        csv_path=csv, top_n=top_n, apply_visibility=apply_vis,
+        csv_path=df, top_n=top_n, apply_visibility=apply_vis,
         lat=lat, lon=lon, elev_m=elev, utc_time=utc_time,
         mask_pad_deg=mask_pad)
+
+    st.subheader("Sky Plot")
     st.pyplot(fig)
-    st.write(stats)
-    st.download_button("Download kept stars", df_keep.to_csv(index=False), "kept_stars.csv")
-    st.download_button("Download masks", masks.to_csv(index=False), "masks.csv")
+
+    st.subheader("Summary Statistics")
+    st.json(stats)
+
+    st.subheader("Foreground Stars (sample)")
+    st.dataframe(df_keep.head())
+
+    st.download_button("Download Kept Stars", df_keep.to_csv(index=False), "kept_stars.csv")
