@@ -64,5 +64,9 @@ Plots the output by geo-location, size, and color with 5 candidate algorithms.
 Plots the constellation from a real boundary (the lines are still connected by us). Using the astropy library, we first identify the real constellation boundary, then carry out geo-location connection algorithms (partly from plot_out.py)
 
 
-# Web Deployment
-Todo (at least 2 weeks from now) Build interactable webpage for the project
+# Steamlit web deployment
+run with version 0.1:
+```bash
+streamlit run app.py
+```
+You need to upload the csv file ```stars_plot_ready.csv``` to plot.
