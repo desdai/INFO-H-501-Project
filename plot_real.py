@@ -454,6 +454,171 @@ def main():
     print(f"Saved stars CSV:  {out_csv.resolve()}")
     print(f"Saved masks CSV:  {out_masks.resolve()}")
 
+def run_constellation_pipeline(
+    csv_path,
+    top_n=1200,
+    apply_visibility=False,
+    lat=0.0,
+    lon=0.0,
+    elev_m=0.0,
+    utc_time="2025-01-01T00:00:00",
+    mask_pad_deg=3.0,
+    knn_k=6,
+    edge_pct=80.0,
+    degree_cap=3,
+):
+    """
+    Runs the constellation-building pipeline and returns:
+      fig     : Matplotlib Figure object
+      df_keep : DataFrame of kept stars (foreground)
+      masks_df: DataFrame of applied bounding boxes
+      stats   : dict of key counts
+    """
+
+    import matplotlib.pyplot as plt
+    from pathlib import Path
+
+    # ---- Load stars ----
+    df = load_stars(Path(csv_path))
+    n_all = len(df)
+
+    # ---- Visibility filter ----
+    if apply_visibility:
+        df = filter_visible(df, lat, lon, elev_m, utc_time)
+    n_vis = len(df)
+
+    # ---- Limit to top_n by brightness ----
+    if top_n is not None:
+        df_bg = df.sort_values("size", ascending=False).head(top_n).reset_index(drop=True)
+    else:
+        df_bg = df.copy()
+    n_bg = len(df_bg)
+
+    # ---- Assign constellation ----
+    sc = SkyCoord(ra=df_bg["x"].to_numpy()*u.deg,
+                  dec=df_bg["y"].to_numpy()*u.deg,
+                  frame="icrs")
+    df_bg["Constellation"] = get_constellation(sc)
+
+    kept_rows, edge_segments, label_rows, mask_rows = [], [], [], []
+
+    # ---- Per-constellation algorithmic bbox ----
+    for cname, g in df_bg.groupby("Constellation"):
+        if len(g) < 3:
+            continue
+
+        ra_unw_all = unwrap_ra_local(g["x"].to_numpy(float))
+        dec_all = g["y"].to_numpy(float)
+        pts_all = normalize_xy_ra_dec(ra_unw_all, dec_all)
+
+        E1 = knn_edges(pts_all, k=knn_k)
+        if len(E1) == 0:
+            continue
+        L1 = edge_lengths(pts_all, E1)
+        E1 = prune_by_length(E1, L1, edge_pct)
+        if len(E1) == 0:
+            continue
+        L1 = edge_lengths(pts_all, E1)
+        E1 = cap_degree(E1, L1, degree_cap)
+        if len(E1) == 0:
+            continue
+
+        mask_keep1 = largest_component_mask(len(pts_all), E1)
+        if not mask_keep1.any():
+            continue
+        kept_local1 = np.where(mask_keep1)[0]
+
+        in_box, (min_ra, max_ra, min_d, max_d) = _apply_bbox_filter(
+            ra_unw_all, dec_all, kept_local1, pad_deg=float(mask_pad_deg)
+        )
+        idx_box_local = np.where(in_box)[0]
+        if len(idx_box_local) < 3:
+            continue
+
+        ra_unw_2 = ra_unw_all[idx_box_local]
+        dec_2 = dec_all[idx_box_local]
+        pts_2 = normalize_xy_ra_dec(ra_unw_2, dec_2)
+
+        E2 = knn_edges(pts_2, k=knn_k)
+        if len(E2) == 0:
+            continue
+        L2 = edge_lengths(pts_2, E2)
+        E2 = prune_by_length(E2, L2, edge_pct)
+        if len(E2) == 0:
+            continue
+        L2 = edge_lengths(pts_2, E2)
+        E2 = cap_degree(E2, L2, degree_cap)
+        if len(E2) == 0:
+            continue
+
+        mask_keep2 = largest_component_mask(len(pts_2), E2)
+        if not mask_keep2.any():
+            continue
+        kept_local2 = np.where(mask_keep2)[0]
+        kept_in_g = idx_box_local[kept_local2]
+        kept_global = g.index.values[kept_in_g]
+        kept_rows.extend(kept_global.tolist())
+
+        g_xy = g[["x", "y"]].to_numpy(float)
+        keep_set = set(kept_in_g.tolist())
+        for i2, j2 in E2:
+            gi = int(idx_box_local[i2])
+            gj = int(idx_box_local[j2])
+            if gi in keep_set and gj in keep_set:
+                x0, y0 = g_xy[gi]; x1, y1 = g_xy[gj]
+                edge_segments.append((x0, y0, x1, y1))
+
+        cx = g_xy[list(keep_set), 0].mean()
+        cy = g_xy[list(keep_set), 1].mean()
+        label_rows.append((cname, cx, cy, len(keep_set)))
+        mask_rows.append((cname, min_ra, max_ra, min_d, max_d,
+                          mask_pad_deg, len(keep_set), cx, cy))
+
+    # ---- Foreground ----
+    df_keep = df_bg.loc[sorted(set(kept_rows))].copy()
+    masks_df = pd.DataFrame(mask_rows, columns=[
+        "Constellation", "min_ra", "max_ra", "min_dec", "max_dec",
+        "pad_deg", "n_kept", "center_ra", "center_dec"
+    ])
+
+    # ---- Plot ----
+    fig, ax = plt.subplots(figsize=(12, 8), facecolor="black")
+    ax.set_facecolor("black")
+
+    if len(df_bg):
+        bg_rgb = df_bg[["R","G","B"]].to_numpy()/255.0
+        bg_sizes = df_bg["size"].to_numpy()*0.6
+        ax.scatter(df_bg["x"], df_bg["y"], s=bg_sizes, c=bg_rgb,
+                   edgecolors="none", alpha=0.35, zorder=1)
+
+    for (x0, y0, x1, y1) in edge_segments:
+        ax.plot([x0, x1], [y0, y1], lw=0.9, alpha=0.98, color="white", zorder=3)
+
+    if len(df_keep):
+        fg_rgb = df_keep[["R","G","B"]].to_numpy()/255.0
+        fg_sizes = df_keep["size"].to_numpy()*1.2
+        ax.scatter(df_keep["x"], df_keep["y"], s=fg_sizes, c=fg_rgb,
+                   edgecolors="none", alpha=0.9, zorder=4)
+
+    ax.set_xlabel("Right Ascension (°)", color="white")
+    ax.set_ylabel("Declination (°)", color="white")
+    ax.tick_params(colors="white")
+    ax.invert_xaxis()
+    ax.set_title("Constellation Graph — bbox-constrained", color="white", pad=12)
+
+    plt.tight_layout()
+
+    # ---- Stats ----
+    stats = dict(
+        total=n_all,
+        visible=n_vis,
+        background=n_bg,
+        kept=len(df_keep),
+        constellations=len(masks_df),
+    )
+
+    return fig, df_keep, masks_df, stats
+
 
 if __name__ == "__main__":
     main()
