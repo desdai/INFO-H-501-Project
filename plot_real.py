@@ -5,7 +5,7 @@ Purpose:
   Always plots background stars, overlays the largest connected
   component per constellation, and labels names with offsets.
 
-Week 9 upgrades (effective knobs):
+previous upgrades (effective knobs):
   (1) Location-based visibility filter:
       --apply_visibility with --observer_lat/--observer_lon/--observer_elev_m
       and --utc_time keeps only stars above the horizon (>0° altitude).
