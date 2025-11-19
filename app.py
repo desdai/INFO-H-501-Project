@@ -35,9 +35,9 @@ with st.sidebar:
     utc_time = st.text_input("UTC Time", "2025-11-06T02:00:00")
     mask_pad = st.slider("Mask padding (°)", 1.0, 15.0, 5.0)
     apply_vis = st.checkbox("Apply visibility filter", value=True)
-    render = st.button("Render sky plot")
+    # render = st.button("Render sky plot")
 
-if render and csv:
+if csv:
     df = pd.read_csv(csv)
     fig, df_keep, masks, stats = run_constellation_pipeline(
         csv_path=df, top_n=top_n, apply_visibility=apply_vis,
