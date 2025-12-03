@@ -430,6 +430,7 @@ def main():
     ax.grid(alpha=0.15, color="white", linestyle=":")
     ax.invert_xaxis()  # mimic sky view
 
+
     plt.tight_layout()
     plt.savefig(out_png, dpi=300, bbox_inches="tight", facecolor="black")
     plt.close()
@@ -463,6 +464,7 @@ def run_constellation_pipeline(
     elev_m=0.0,
     utc_time="2025-01-01T00:00:00",
     mask_pad_deg=3.0,
+    draw_masks=True,
     knn_k=6,
     edge_pct=80.0,
     degree_cap=3,
@@ -491,6 +493,12 @@ def run_constellation_pipeline(
     if apply_visibility:
         df = filter_visible(df, lat, lon, elev_m, utc_time)
     n_vis = len(df)
+
+    # Higher elevation = clearer air = brighter stars
+    if elev_m is not None and elev_m > 0:
+        # Linear scale: +25% brightness per 1000m
+        brightness_factor = 1 + 0.0005 * elev_m
+        df["size"] = df["size"] * brightness_factor
 
     # ---- Limit to top_n by brightness ----
     if top_n is not None:
@@ -587,7 +595,7 @@ def run_constellation_pipeline(
     ])
 
     # ---- Plot in RA/Dec ----
-    fig, ax = plt.subplots(figsize=(12, 8), facecolor="black")
+    fig, ax = plt.subplots(figsize=(8.0, 5.12), facecolor="black")
     ax.set_facecolor("black")
 
     # ---- Visual constants (copied from argparse defaults) ----
@@ -627,8 +635,9 @@ def run_constellation_pipeline(
                     va="center", alpha=0.9, zorder=5)
 
     # 5) Optional: draw applied masks (bounding boxes)
-    for cname, min_ra, max_ra, min_d, max_d, pad, n_kept, cx, cy in mask_rows:
-        _plot_bbox_wrapped(ax, min_ra, max_ra, min_d, max_d, lw=0.9, alpha=0.6)
+    if draw_masks:
+        for cname, min_ra, max_ra, min_d, max_d, pad, n_kept, cx, cy in mask_rows:
+            _plot_bbox_wrapped(ax, min_ra, max_ra, min_d, max_d, lw=0.9, alpha=0.6)
 
     # Cosmetics
     ax.set_xlabel("Right Ascension (deg)", color="white")
@@ -640,6 +649,10 @@ def run_constellation_pipeline(
     ax.set_title(" ".join(title_bits), color="white", pad=12)
     ax.grid(alpha=0.15, color="white", linestyle=":")
     ax.invert_xaxis()  # mimic sky view
+    
+    ax.set_xlim(360, 0)   # because invert_xaxis flips RA
+    ax.set_ylim(-90, 90)
+
     plt.tight_layout()
 
     # ---- Prepare outputs for Streamlit ----
