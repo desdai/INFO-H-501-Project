@@ -70,3 +70,11 @@ run with version 0.1:
 streamlit run app.py
 ```
 You need to upload the csv file ```stars_plot_ready.csv``` to plot.
+
+
+# GIF and Video
+
+Run 
+```bash
+python make_animation.py
+```
