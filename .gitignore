@@ -1,4 +1,4 @@
 stars.csv
 stars.zip
 week7 stand_Up.docx
-*.pyc
+__pycache__/
