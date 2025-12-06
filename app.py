@@ -1,6 +1,7 @@
 import streamlit as st
 from plot_real import run_constellation_pipeline
 import pandas as pd
+import os
 
 st.title("Constellation Graph Explorer")
 st.set_page_config(
@@ -10,20 +11,20 @@ st.set_page_config(
 )
 
 # Answers to MVP meeting
-st.markdown("---")
-st.subheader("Issues")
-st.markdown("""
-- Visibility filter can empty dataset at certain lat/lon/time combinations.  
-- RA 0° wrapping can clip bounding boxes.  
-- Two-pass algorithm increases computation time slightly.
-""")
+# st.markdown("---")
+# st.subheader("Issues")
+# st.markdown("""
+# - Visibility filter can empty dataset at certain lat/lon/time combinations.  
+# - RA 0° wrapping can clip bounding boxes.  
+# - Two-pass algorithm increases computation time slightly.
+# """)
 
-st.subheader("Next Steps")
-st.markdown("""
-- Add all-sky projection view.  
-- Optimize runtime using cached constellations.  
-- Enable draggable user masks for dynamic reruns.
-""")
+# st.subheader("Next Steps")
+# st.markdown("""
+# - Add all-sky projection view.  
+# - Optimize runtime using cached constellations.  
+# - Enable draggable user masks for dynamic reruns.
+# """)
 
 with st.sidebar:
     st.header("Controls")
@@ -54,3 +55,54 @@ if csv:
     st.dataframe(df_keep.head())
 
     st.download_button("Download Kept Stars", df_keep.to_csv(index=False), "kept_stars.csv")
+
+    # ------------------------------------------
+    # Animation Gallery (GIFs / MP4s)
+    # ------------------------------------------
+    st.subheader("Animation Gallery")
+
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
+
+    # ---- TIME ANIMATION ----
+    time_gif = "frames_time/time_animation.gif"
+    time_mp4 = "frames_time/time_animation.mp4"
+    # if os.path.exists(time_gif):
+    #     col1.markdown("**Time-Lapse Animation**")
+    #     col1.image(time_gif)
+    if os.path.exists(time_mp4):
+        col1.markdown("**Time-Lapse Animation (MP4)**")
+        col1.video(time_mp4)
+
+    # ---- LAT ANIMATION ----
+    lat_gif = "frames_lat/lat_animation.gif"
+    lat_mp4 = "frames_lat/lat_animation.mp4"
+    # if os.path.exists(lat_gif):
+    #     col2.markdown("**Latitude Sweep**")
+    #     col2.image(lat_gif)
+    if os.path.exists(lat_mp4):
+        col2.markdown("**Latitude Sweep (MP4)**")
+        col2.video(lat_mp4)
+
+    # ---- LONGITUDE ANIMATION ----
+    lon_gif = "frames_lon/lon_animation.gif"
+    lon_mp4 = "frames_lon/lon_animation.mp4"
+    # if os.path.exists(lon_gif):
+    #     col3.markdown("**Longitude Sweep**")
+    #     col3.image(lon_gif)
+    if os.path.exists(lon_mp4):
+        col3.markdown("**Longitude Sweep (MP4)**")
+        col3.video(lon_mp4)
+
+    # ---- ELEVATION ANIMATION ----
+    elev_gif = "frames_elev/elev_animation.gif"
+    elev_mp4 = "frames_elev/elev_animation.mp4"
+    # if os.path.exists(elev_gif):
+    #     col4.markdown("**Elevation Sweep (Brightness Enhanced)**")
+    #     col4.image(elev_gif)
+    if os.path.exists(elev_mp4):
+        col4.markdown("**Elevation Sweep (MP4)**")
+        col4.video(elev_mp4)
+
+    st.markdown("---")
+
