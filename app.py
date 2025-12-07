@@ -40,10 +40,16 @@ with st.sidebar:
 
 if csv:
     df = pd.read_csv(csv)
-    fig, df_keep, masks, stats = run_constellation_pipeline(
-        csv_path=df, top_n=top_n, apply_visibility=apply_vis,
-        lat=lat, lon=lon, elev_m=elev, utc_time=utc_time,
-        mask_pad_deg=mask_pad)
+
+    try:
+        fig, df_keep, masks, stats = run_constellation_pipeline(
+            csv_path=df, top_n=top_n, apply_visibility=apply_vis,
+            lat=lat, lon=lon, elev_m=elev, utc_time=utc_time,
+            mask_pad_deg=mask_pad
+        )
+    except Exception as e:
+        st.error(f"Pipeline failed: {e}")
+        st.stop()
 
     st.subheader("Sky Plot")
     st.pyplot(fig)

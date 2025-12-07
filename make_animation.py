@@ -13,13 +13,34 @@ import imageio.v3 as iio
 from plot_real import run_constellation_pipeline
 
 
-# ----------------------------------------
-# GLOBAL CONFIG
-# ----------------------------------------
-CSV_FILE = "stars_plot_ready.csv"
-N_FRAMES = 60
-TOP_N = 1200
-MASK_PAD = 3
+# ============================================================
+#  CLASS FOR CONFIGURATION
+# ============================================================
+class AnimationConfig:
+    """
+    Holds configuration for animation sweeps.
+    """
+    def __init__(self, csv_path, top_n=1200, pad=3.0,
+                 base_lat=39.7, base_lon=30, base_elev=220,
+                 n_frames_general=60, n_frames_elev=20):
+
+        self.csv_path = csv_path
+        self.top_n = top_n
+        self.pad = pad
+        self.base_lat = base_lat
+        self.base_lon = base_lon
+        self.base_elev = base_elev
+
+        self.n_frames_general = n_frames_general
+        self.n_frames_elev = n_frames_elev
+
+    def __repr__(self):
+        return (
+            f"AnimationConfig(csv={self.csv_path}, top_n={self.top_n}, "
+            f"pad={self.pad}, lat={self.base_lat}, lon={self.base_lon}, "
+            f"elev={self.base_elev}, frames_general={self.n_frames_general}, "
+            f"frames_elev={self.n_frames_elev})"
+        )
 
 
 # ----------------------------------------
@@ -29,29 +50,29 @@ def frame_name(outdir, i):
     return outdir / f"frame_{i:04d}.png"
 
 
-# ----------------------------------------
-# TIME SWEEP
-# ----------------------------------------
-def animate_time(df):
+# ============================================================
+#  TIME SWEEP
+# ============================================================
+def animate_time(df, cfg: AnimationConfig):
     outdir = Path("frames_time")
     outdir.mkdir(exist_ok=True)
 
     start = datetime(2025, 11, 6, 18, 0, 0)
     dt = timedelta(minutes=15)
 
-    for i in range(N_FRAMES):
+    for i in range(cfg.n_frames_general):
         utc_str = (start + i * dt).strftime("%Y-%m-%dT%H:%M:%S")
         print(f"[time] Frame {i}, utc={utc_str}")
 
         fig, df_keep, masks, stats = run_constellation_pipeline(
             df,
-            top_n=TOP_N,
+            top_n=cfg.top_n,
             apply_visibility=True,
-            lat=39.7,
-            lon=30,
-            elev_m=220,
+            lat=cfg.base_lat,
+            lon=cfg.base_lon,
+            elev_m=cfg.base_elev,
             utc_time=utc_str,
-            mask_pad_deg=MASK_PAD,
+            mask_pad_deg=cfg.pad,
             draw_masks=False,
         )
         fig.savefig(frame_name(outdir, i), dpi=200, bbox_inches="tight")
@@ -60,27 +81,27 @@ def animate_time(df):
     build_gif_mp4(outdir, "time")
 
 
-# ----------------------------------------
-# LATITUDE SWEEP
-# ----------------------------------------
-def animate_lat(df):
+# ============================================================
+#  LATITUDE SWEEP
+# ============================================================
+def animate_lat(df, cfg: AnimationConfig):
     outdir = Path("frames_lat")
     outdir.mkdir(exist_ok=True)
 
-    lats = np.linspace(-60, 60, N_FRAMES)
+    lats = np.linspace(-60, 60, cfg.n_frames_general)
 
     for i, lat in enumerate(lats):
         print(f"[lat] Frame {i}, lat={lat:.2f}")
 
         fig, df_keep, masks, stats = run_constellation_pipeline(
             df,
-            top_n=TOP_N,
+            top_n=cfg.top_n,
             apply_visibility=True,
             lat=float(lat),
-            lon=30,
-            elev_m=220,
+            lon=cfg.base_lon,
+            elev_m=cfg.base_elev,
             utc_time="2025-11-06T02:00:00",
-            mask_pad_deg=MASK_PAD,
+            mask_pad_deg=cfg.pad,
             draw_masks=False,
         )
         fig.savefig(frame_name(outdir, i), dpi=200, bbox_inches="tight")
@@ -89,27 +110,27 @@ def animate_lat(df):
     build_gif_mp4(outdir, "lat")
 
 
-# ----------------------------------------
-# LONGITUDE SWEEP
-# ----------------------------------------
-def animate_lon(df):
+# ============================================================
+#  LONGITUDE SWEEP
+# ============================================================
+def animate_lon(df, cfg: AnimationConfig):
     outdir = Path("frames_lon")
     outdir.mkdir(exist_ok=True)
 
-    lons = np.linspace(0, 360, N_FRAMES)
+    lons = np.linspace(0, 360, cfg.n_frames_general)
 
     for i, lon in enumerate(lons):
         print(f"[lon] Frame {i}, lon={lon:.2f}")
 
         fig, df_keep, masks, stats = run_constellation_pipeline(
             df,
-            top_n=TOP_N,
+            top_n=cfg.top_n,
             apply_visibility=True,
-            lat=39.7,
+            lat=cfg.base_lat,
             lon=float(lon),
-            elev_m=220,
+            elev_m=cfg.base_elev,
             utc_time="2025-11-06T02:00:00",
-            mask_pad_deg=MASK_PAD,
+            mask_pad_deg=cfg.pad,
             draw_masks=False,
         )
         fig.savefig(frame_name(outdir, i), dpi=200, bbox_inches="tight")
@@ -118,27 +139,27 @@ def animate_lon(df):
     build_gif_mp4(outdir, "lon")
 
 
-# ----------------------------------------
-# ELEVATION SWEEP
-# ----------------------------------------
-def animate_elev(df):
+# ============================================================
+#  ELEVATION SWEEP
+# ============================================================
+def animate_elev(df, cfg: AnimationConfig):
     outdir = Path("frames_elev")
     outdir.mkdir(exist_ok=True)
 
-    elevs = np.linspace(0, 4000, 20)
+    elevs = np.linspace(0, 4000, cfg.n_frames_elev)
 
     for i, el in enumerate(elevs):
         print(f"[elev] Frame {i}, elev={el:.1f}")
 
         fig, df_keep, masks, stats = run_constellation_pipeline(
             df,
-            top_n=TOP_N,
+            top_n=cfg.top_n,
             apply_visibility=True,
-            lat=39.7,
-            lon=30,
+            lat=cfg.base_lat,
+            lon=cfg.base_lon,
             elev_m=float(el),
             utc_time="2025-11-06T02:00:00",
-            mask_pad_deg=MASK_PAD,
+            mask_pad_deg=cfg.pad,
             draw_masks=False,
         )
         fig.savefig(frame_name(outdir, i), dpi=200, bbox_inches="tight")
@@ -147,39 +168,52 @@ def animate_elev(df):
     build_gif_mp4(outdir, "elev")
 
 
-# ----------------------------------------
-# CREATE GIF + MP4 FOR ONE MODE
-# ----------------------------------------
+# ============================================================
+#  CREATE GIF + MP4
+# ============================================================
 def build_gif_mp4(outdir, mode):
     print(f"Building GIF/MP4 for mode={mode} ...")
 
     frame_files = sorted([f for f in outdir.iterdir() if f.suffix == ".png"])
 
-    # GIF
     gif_path = outdir / f"{mode}_animation.gif"
     with imageio.get_writer(gif_path, mode="I", duration=0.08) as writer:
         for f in frame_files:
             writer.append_data(iio.imread(f))
-    print("GIF saved:", gif_path)
 
-    # MP4
     mp4_path = outdir / f"{mode}_animation.mp4"
     with imageio.get_writer(mp4_path, fps=12, codec="libx264") as writer:
         for f in frame_files:
             writer.append_data(iio.imread(f))
+
+    print("GIF saved:", gif_path)
     print("MP4 saved:", mp4_path)
 
 
-# ----------------------------------------
-# MAIN
-# ----------------------------------------
+# ============================================================
+#  MAIN
+# ============================================================
 if __name__ == "__main__":
-    df = pd.read_csv(CSV_FILE)
+
+    cfg = AnimationConfig(
+        csv_path="stars_plot_ready.csv",
+        top_n=1200,
+        pad=3.0,
+        base_lat=39.7,
+        base_lon=30,
+        base_elev=220,
+        n_frames_general=60,   # time/lat/lon
+        n_frames_elev=20       # To make it easy to see
+    )
+
+    print("Using Config:", cfg)
+
+    df = pd.read_csv(cfg.csv_path)
     print(f"Loaded {len(df)} stars")
 
-    # animate_time(df)
-    # animate_lat(df)
-    # animate_lon(df)
-    animate_elev(df)
+    animate_time(df, cfg)
+    animate_lat(df, cfg)
+    animate_lon(df, cfg)
+    animate_elev(df, cfg)
 
     print("\n==== All animations finished ====")

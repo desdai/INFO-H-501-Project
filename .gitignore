@@ -2,4 +2,6 @@ stars.csv
 stars.zip
 week7 stand_Up.docx
 __pycache__/
+.pytest_cache/
 old_testing_files/
+.env
