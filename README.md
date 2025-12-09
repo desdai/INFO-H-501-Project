@@ -1,80 +1,159 @@
-# INFO-H-501-Project
-Download data from ```https://www.kaggle.com/datasets/realkiller69/gaia-stars-dataset-from-dr3-data-release-3```, and name the csv ``stars.csv``.
+# Constellation Graph Explorer
+INFO-H 501 – Final Project
 
-# Columns to Keep for Visualization
+## Overview
+This project builds an interactive Streamlit web application that visualizes the night sky using a simplified subset of the Gaia DR3 star catalog. Users can:
 
-To visualize the **Gaia DR3 stars dataset** on a 2D scatter plot that captures **spatial position, color, and size**, preserve the following columns:
+- Upload a star dataset or use a provided sample file  
+- Visualize a sky projection (Right Ascension and Declination)  
+- Reconstruct constellation graphs using a kNN-based algorithm  
+- Apply visibility filtering based on latitude, longitude, elevation, and time  
+- Explore animated simulations of star movement and observer-location changes  
+- Download processed star tables for further analysis  
 
----
-
-### Position (x, y coordinates)
-Use these to plot the stars’ positions on the plane:
-
-- **`RA_ICRS`** — Right ascension (x-axis)  
-- **`DE_ICRS`** — Declination (y-axis)
-
-*(These define the celestial coordinates in degrees.)*
+Stakeholders who benefit from this tool include astronomy students, instructors teaching celestial mechanics, and data science learners studying visualization and coordinate transformations. The application provides an intuitive interface for exploring how constellations appear differently depending on the observer’s location and the time of observation.
 
 ---
 
-### Color (for RGB mapping)
-Use the color indices to derive a realistic star color:
+## Data Description
+We use a processed subset of the Gaia DR3 star catalog.
 
-- **`BP-RP`** — Gaia’s color index (bluer = smaller value, redder = larger value)  
-    Map this to RGB using an astronomical color scale or a Matplotlib colormap such as `plasma`, `coolwarm`, or a custom one.
+Original dataset source:  
+https://www.kaggle.com/datasets/realkiller69/gaia-stars-dataset-from-dr3-data-release-3
+
+From the full dataset, we extracted the following key columns:
+
+- `RA_ICRS`: Right ascension (degrees)  
+- `DE_ICRS`: Declination (degrees)  
+- `BP-RP`: Gaia color index  
+- `Gmag`: Apparent magnitude  
+
+We preprocessed these fields into:
+
+- `x`, `y`: Projected RA/Dec for plotting  
+- `R`, `G`, `B`: Realistic star colors  
+- `size`: Dot size scaled by brightness  
+
+A helper script (`prepare_for_plot.py`) performs this preprocessing and outputs `stars_plot_ready.csv`.
 
 ---
 
-### Size (dot diameter)
-Base the star’s visual size on brightness or physical radius:
+## Algorithm Description
+The application reconstructs constellation shapes using a multi-stage geometric algorithm:
 
-- **Apparent brightness** → `Gmag`  
-  - Inverse relation: brighter stars (smaller Gmag) = larger dots.
+1. **Brightness filtering**  
+   Select the top N brightest stars.
 
+2. **Constellation assignment**  
+   Use `astropy.coordinates.get_constellation` to assign each star to its IAU constellation.
 
-To execute above, run
-```bash
-python prepare_for_plot.py
+3. **kNN-based edge construction**  
+   - Build edges between stars using k-nearest neighbors  
+   - Remove outlier edges using length-percentile pruning  
+   - Cap node degree to reduce visual clutter  
+
+4. **Bounding-box filtering**  
+   - Compute bounding box around the largest connected component  
+   - Re-run the algorithm inside the bounding box (to remove noise)  
+   - Select only edges inside the refined region  
+
+5. **Visibility computation**  
+   Apply observer-based filtering using `astroplan`:
+   - Convert RA/Dec to Alt/Az  
+   - Keep only stars above the horizon (altitude > 0°)
+
+6. **Final rendering**  
+   Show background stars, constellation edges, and labels.
+
+In addition, the project includes animation scripts to generate videos simulating:
+
+- Changing observation time  
+- Changing latitude  
+- Changing longitude  
+- Changing elevation  
+
+---
+
+## Tools Used
+
+### Python Libraries
+- **pandas** – Data cleaning and table manipulation  
+- **numpy** – Numerical calculations  
+- **matplotlib** – Plotting sky projections  
+- **astropy** – Celestial coordinates and constellation lookup  
+- **astroplan** – Visibility calculations (observer → Alt/Az)  
+- **scipy** – kNN graph operations  
+- **streamlit** – Interactive web application  
+- **imageio** – GIF/MP4 animation generation  
+
+### Additional Tools
+- **Git + GitHub** – Version control  
+- **.gitignore** – Prevents committing large data, environment files  
+- **.env** (ignored) – Stores local paths or API keys if needed  
+
+---
+
+## Ethical Concerns
+
+### 1. Data Source and Attribution  
+Gaia DR3 star data was collected for astronomical research.  
+Although the subset we use is publicly available, proper attribution is required.  
+We provide dataset credit and avoid redistributing the original large dataset.
+
+### 2. Computational Misinterpretation  
+Constellation lines in the app are not official IAU shapes; they are generated algorithmically.  
+Users might mistakenly interpret them as canonical.  
+We mitigate this by documenting that the edges are approximate.
+
+### 3. Accessibility  
+We include:  
+- Clear UI explanations  
+- High-contrast visualizations (dark mode for night-sky)  
+- Avoid technical jargon in the user interface  
+Still, more could be done for screen-reader support.
+
+### 4. Fair Use of Resources  
+The app allows users to upload custom CSV files.  
+We mitigate risks of large or malicious uploads by validating column names and catching errors.
+
+---
+
+## Running the Application
+
+### Install dependencies
 ```
-This create x,y-coordinates, size of the stars, color (RGB) of the stars. For clarity, we only show the largest 2000 stars.
-
-Plot with:
-```bash
-python plot.py
+conda env create -f star.yml
+```
+and if you are using mac:
+```
+conda env create -f star_mac.yml
 ```
 
-# Algorithm to outline constellations
-(This week's progress)
-
-```bash
-plot_out.py
+### Launch Streamlit app
 ```
-
-Plots the output by geo-location, size, and color with 5 candidate algorithms.
-
-```bash
-  python plot_real.py \
-    --csv stars_plot_ready.csv --top_n 1000 \
-    --apply_visibility \
-    --observer_lat 39.77 --observer_lon -86.16 --observer_elev_m 220 \
-    --utc_time 2025-11-06T02:00:00 \
-    --mask_pad_deg 5 --draw_masks \
-    --label_dx -15 --label_dy 1.5 --outdir out_week9
-```
-Plots the constellation from a real boundary (the lines are still connected by us). Using the astropy library, we first identify the real constellation boundary, then carry out geo-location connection algorithms (partly from plot_out.py)
-
-
-# Steamlit web deployment
-run with version 0.1:
-```bash
 streamlit run app.py
 ```
-You need to upload the csv file ```stars_plot_ready.csv``` to plot.
 
+---
 
-# GIF and Video
-
-Run 
-```bash
-python make_animation.py
+## Project Structure
 ```
+project/
+│
+├── old_testing_files      # Code and results during designing of project
+├── frames_xxx             # Folders containing frames and animations created
+├── test                   # Folder including a unit test, as required (run pytest)
+├── app.py                 # Streamlit front end
+├── plot_real.py           # Constellation reconstruction module
+├── prepare_for_plot.py    # Preprocessing script
+├── make_animation.py      # GIF/MP4 generation
+├── stars_plot_ready.csv   # Sample data (small subset)
+└── README.md              # Documentation
+```
+
+---
+
+## License
+This project is for educational use under the INFO-H 501 course.  
+Gaia DR3 data remains subject to ESA licensing.
+
