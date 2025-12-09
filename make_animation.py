@@ -167,6 +167,64 @@ def animate_elev(df, cfg: AnimationConfig):
 
     build_gif_mp4(outdir, "elev")
 
+# ============================================================
+#  VISIBLE TOP_N STARS SWEEP
+# ============================================================
+def animate_topN(df, cfg: AnimationConfig):
+    outdir = Path("frames_topN")
+    outdir.mkdir(exist_ok=True)
+
+    topNs = np.linspace(100, 2000, cfg.n_frames_general).astype(int)
+
+    for i, nstars in enumerate(topNs):
+        print(f"[topN] Frame {i}, top_n={nstars}")
+
+        fig, df_keep, masks, stats = run_constellation_pipeline(
+            df,
+            top_n=int(nstars),
+            apply_visibility=True,
+            lat=cfg.base_lat,
+            lon=cfg.base_lon,
+            elev_m=cfg.base_elev,
+            utc_time="2025-11-06T02:00:00",
+            mask_pad_deg=cfg.pad,
+            draw_masks=False,
+        )
+
+        fig.savefig(frame_name(outdir, i), dpi=200, bbox_inches="tight")
+        fig.clf()
+
+    build_gif_mp4(outdir, "topN")
+
+# ============================================================
+#  MASKPAD SIZE SWEEP
+# ============================================================
+def animate_maskpad(df, cfg: AnimationConfig):
+    outdir = Path("frames_maskpad")
+    outdir.mkdir(exist_ok=True)
+
+    pads = np.linspace(1, 15, cfg.n_frames_general)   # degrees of padding
+
+    for i, pad in enumerate(pads):
+        print(f"[maskpad] Frame {i}, pad={pad:.2f}°")
+
+        fig, df_keep, masks, stats = run_constellation_pipeline(
+            df,
+            top_n=cfg.top_n,
+            apply_visibility=True,
+            lat=cfg.base_lat,
+            lon=cfg.base_lon,
+            elev_m=cfg.base_elev,
+            utc_time="2025-11-06T02:00:00",
+            mask_pad_deg=float(pad),
+            draw_masks=False,
+        )
+
+        fig.savefig(frame_name(outdir, i), dpi=200, bbox_inches="tight")
+        fig.clf()
+
+    build_gif_mp4(outdir, "maskpad")
+
 
 # ============================================================
 #  CREATE GIF + MP4
@@ -202,7 +260,7 @@ if __name__ == "__main__":
         base_lat=39.7,
         base_lon=30,
         base_elev=220,
-        n_frames_general=60,   # time/lat/lon
+        n_frames_general=60,
         n_frames_elev=20       # To make it easy to see
     )
 
@@ -215,5 +273,7 @@ if __name__ == "__main__":
     animate_lat(df, cfg)
     animate_lon(df, cfg)
     animate_elev(df, cfg)
+    animate_topN(df, cfg)
+    animate_maskpad(df, cfg)
 
     print("\n==== All animations finished ====")

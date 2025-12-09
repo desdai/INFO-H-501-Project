@@ -149,14 +149,14 @@ with st.sidebar:
     csv = st.file_uploader("Upload a star CSV file", type="csv")
 
     st.markdown("### Sky Parameters")
-    lat = st.number_input("Latitude (°)", -90.0, 90.0, 39.77)
-    lon = st.number_input("Longitude (°)", -180.0, 180.0, -86.16)
+    lat = st.number_input("Latitude (°)", -90.0, 90.0, 39.70)
+    lon = st.number_input("Longitude (°)", -180.0, 180.0, 30.00)
     elev = st.number_input("Elevation (m)", 0, 4000, 220)
     utc_time = st.text_input("UTC Time", "2025-11-06T02:00:00")
 
     st.markdown("### Constellation Reconstruction")
-    top_n = st.number_input("Top N brightest stars", 100, 10000, 1200, step=100)
-    mask_pad = st.slider("Mask padding (°)", 1.0, 15.0, 5.0)
+    top_n = st.number_input("Top N brightest stars", 100, 2000, 1200, step=100)
+    mask_pad = st.slider("Mask padding (°)", 1.0, 15.0, 3.0)
 
     apply_vis = st.checkbox("Apply visibility (alt > 0°)", value=True)
 
@@ -225,6 +225,7 @@ if csv:
 
         col1, col2 = st.columns(2)
         col3, col4 = st.columns(2)
+        col5, col6 = st.columns(2)
 
         def embed_anim(path, label, column):
             if os.path.exists(path):
@@ -233,10 +234,14 @@ if csv:
             else:
                 column.info(f"{label}: animation file missing.")
 
+
         embed_anim("frames_time/time_animation.mp4", "Time-Lapse Rotation", col1)
         embed_anim("frames_lat/lat_animation.mp4", "Latitude Sweep", col2)
         embed_anim("frames_lon/lon_animation.mp4", "Longitude Sweep", col3)
         embed_anim("frames_elev/elev_animation.mp4", "Elevation Sweep", col4)
+        embed_anim("frames_topN/topN_animation.mp4", "Top-N Bright Stars Sweep", col5)
+        embed_anim("frames_maskpad/maskpad_animation.mp4", "Mask Padding Sweep", col6)
+
 
 else:
     st.info("⬅️ Upload a CSV file in the sidebar to begin.")
